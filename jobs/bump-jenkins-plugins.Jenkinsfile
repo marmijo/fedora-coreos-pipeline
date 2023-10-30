@@ -55,7 +55,10 @@ lock(resource: "bump-jenkins") {
                     if [[ -d fedora-coreos-pipeline ]]; then
                         rm -rf fedora-coreos-pipeline
                     fi
-                    git clone --branch main https://github.com/coreosbot-releng/fedora-coreos-pipeline.git 
+                    git clone --branch pluginsupdate https://github.com/coreosbot-releng/fedora-coreos-pipeline.git
+                    cd fedora-coreos-pipeline
+                    git remote add upstream https://github.com/coreos/fedora-coreos-pipeline.git
+                    git pull upstream main
                 """)
                 def plugins_lockfile = "jenkins/controller/plugins.txt"
                 pluginslist = shwrapCapture("cat $plugins_lockfile | grep -v ^#").split('\n')
@@ -104,7 +107,6 @@ lock(resource: "bump-jenkins") {
                     }
                 }
             }
-
         } catch (e) {
             currentBuild.result = 'FAILURE'
             throw e
