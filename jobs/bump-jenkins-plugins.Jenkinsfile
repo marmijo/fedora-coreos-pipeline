@@ -18,6 +18,10 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
+botCreds = "github-coreosbot-releng-token-username-password"
+coreosbot_token = "github-coreosbot-releng-token-text"
+pr_branch = "jp"
+
 def getPluginLatestVersion(pluginsUpdate) {
     // Extract the plugin version from the URL 
     def versionPattern = /\/([^\/]+)\/([^\/]+)\/([^\/]+)\.hpi/
@@ -43,8 +47,7 @@ lock(resource: "bump-jenkins") {
 
             def pluginslist
             def pluginsToUpdate = [:]
-            def haveChanges=false
-            def branch = params.STREAM
+            def haveChanges=false 
             def repo = "coreos/fedora-coreos-pipeline"
 
             stage("Read plugins.txt") {
@@ -97,9 +100,9 @@ lock(resource: "bump-jenkins") {
                 }
             }
 
-            /*stage ("Create a Pull Request"){
-                curl -H "Authorization: token ${coreosbot_token}" -X POST -d '{"title": "Stream metadata for ${params.STREAM} release ${params.VERSION}","head": "${pr_branch}","base": "master"}' https://api.github.com/repos/coreos/fedora-coreos-streams/pulls
-            }*/
+            stage ("Create a Pull Request"){
+                curl -H "Authorization: token ${coreosbot_token}" -X POST -d '{"title": "Bump jenkins plugin version to the latest","head": "${pr_branch}","base": "main"}' https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
+            }
 
         } catch (e) {
             currentBuild.result = 'FAILURE'
