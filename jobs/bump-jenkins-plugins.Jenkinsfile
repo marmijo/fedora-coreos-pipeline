@@ -49,7 +49,6 @@ lock(resource: "bump-jenkins") {
             def pluginslist
             def pluginsToUpdate = [:]
             def haveChanges=false 
-            def repo = "coreos/fedora-coreos-pipeline"
 
             stage("Read plugins.txt") {
                 shwrapCapture("""
