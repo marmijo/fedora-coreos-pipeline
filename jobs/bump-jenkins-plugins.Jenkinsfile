@@ -88,8 +88,8 @@ lock(resource: "bump-jenkins") {
             stage("Push") {
                 if (haveChanges){
                     def message = "bump jenkins plugin version"
-                    shwrap("git -C add /plugins.txt")
-                    shwrap("git -C commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-jenkins-plugins.Jenkinsfile'")
+                    shwrap("git add jenkins/controller/plugins.txt")
+                    shwrap("git commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-jenkins-plugins.Jenkinsfile'")
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
