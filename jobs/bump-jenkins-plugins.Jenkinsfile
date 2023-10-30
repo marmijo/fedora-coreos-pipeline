@@ -21,7 +21,7 @@ properties([
 repo = "coreosbot-releng/fedora-coreos-pipeline"
 botCreds = "github-coreosbot-releng-token-username-password"
 coreosbot_token = "github-coreosbot-releng-token-text"
-pr_branch = "jp"
+pr_branch = "pluginsupdate"
 
 def getPluginLatestVersion(pluginsUpdate) {
     // Extract the plugin version from the URL 
@@ -55,7 +55,7 @@ lock(resource: "bump-jenkins") {
                     if [[ -d fedora-coreos-pipeline ]]; then
                         rm -rf fedora-coreos-pipeline
                     fi
-                    git clone --branch jp https://github.com/aaradhak/fedora-coreos-pipeline.git
+                    git clone --branch jp https://github.com/aaradhak/fedora-coreos-pipeline.git 
                 """)
                 def plugins_lockfile = "jenkins/controller/plugins.txt"
                 pluginslist = shwrapCapture("cat $plugins_lockfile | grep -v ^#").split('\n')
@@ -97,7 +97,7 @@ lock(resource: "bump-jenkins") {
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
-                                                        shwrap("git push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${pr_branch}")
+                                                        shwrap("git push -u https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${pr_branch}")
                                                         shwrap("""
                                                             curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "Bump jenkins plugin version to the latest", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/coreosbot-releng/fedora-coreos-pipeline/pulls
                                                         """)
