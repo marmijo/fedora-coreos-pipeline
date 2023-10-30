@@ -18,15 +18,6 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-
-/*def getPluginLatestURL(pluginName) {
-    def pluginsUpdate
-    //node {
-        pluginsUpdate = shwrapCapture("curl -Ls -o /dev/null -w '%{url_effective}' https://updates.jenkins.io/download/plugins/${pluginName}/latest/${pluginName}.hpi")
-    //}
-    return pluginsUpdate
-}*/
-
 def getPluginLatestVersion(pluginsUpdate) {
     // Extract the plugin version from the URL 
     def versionPattern = /\/([^\/]+)\/([^\/]+)\/([^\/]+)\.hpi/
@@ -46,8 +37,8 @@ lock(resource: "bump-jenkins") {
     node{
         try {
             shwrap("""
-                git config --global user.name "CoreOS Bot"
-                git config --global user.email "coreosbot@fedoraproject.org"
+                git config --global user.name "CoreOS Bot Releng"
+                git config --global user.email "coreosbot-releng@fedoraproject.org"
             """)
 
             def pluginslist
@@ -94,17 +85,17 @@ lock(resource: "bump-jenkins") {
                 }
             }
         
-            /*stage("Push") {
+            stage("Push") {
                 if (haveChanges){
                     def message = "bump jenkins plugin version"
-                    shwrap("git -C add jenkins/controller/plugins.txt")
-                    shwrap("git -C commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-jenkins.Jenkinsfile'")
+                    shwrap("git -C add /plugins.txt")
+                    shwrap("git -C commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-jenkins-plugins.Jenkinsfile'")
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
                     }
                 }
-            } */  
+            }
 
             /*stage ("Create a Pull Request"){
                 curl -H "Authorization: token ${coreosbot_token}" -X POST -d '{"title": "Stream metadata for ${params.STREAM} release ${params.VERSION}","head": "${pr_branch}","base": "master"}' https://api.github.com/repos/coreos/fedora-coreos-streams/pulls
