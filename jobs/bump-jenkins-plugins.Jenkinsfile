@@ -18,6 +18,7 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
+repo = "coreosbot-releng/fedora-coreos-pipeline"
 botCreds = "github-coreosbot-releng-token-username-password"
 coreosbot_token = "github-coreosbot-releng-token-text"
 pr_branch = "jp"
@@ -93,12 +94,14 @@ lock(resource: "bump-jenkins") {
                     def message = "bump jenkins plugin version"
                     shwrap("git add jenkins/controller/plugins.txt")
                     shwrap("git commit -m '${message}' -m 'Job URL: ${env.BUILD_URL}' -m 'Job definition: https://github.com/coreos/fedora-coreos-pipeline/blob/main/jobs/bump-jenkins-plugins.Jenkinsfile'")
+                    
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
+                                                        shwrap("git push https://\${GHUSER}:\${GHTOKEN}@github.com/${repo} ${pr_branch}")
                                                         shwrap("""
-                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "Bump jenkins plugin version to the latest", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/coreosbot-releng/fedora-coreos-pipeline/pulls
-                        """)
+                                                            curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "Bump jenkins plugin version to the latest", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/coreosbot-releng/fedora-coreos-pipeline/pulls
+                                                        """)
                     }
                 }
             }
