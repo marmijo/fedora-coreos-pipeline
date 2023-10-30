@@ -96,15 +96,16 @@ lock(resource: "bump-jenkins") {
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
+                                                        shwrap("""
+                        curl -H "Authorization: token ${coreosbot_token}" -X POST -d '{ "title": "Bump jenkins plugin version to the latest", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
+                        """)
                     }
                 }
             }
 
-            stage ("Create a Pull Request"){
-                shwrap("""
-                        curl -H "Authorization: token ${coreosbot_token}" -X POST -d '{ "title": "Bump jenkins plugin version to the latest", "head": "${pr_branch}", "base": "main" }' https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
-                        """)
-            }
+            /*stage ("Create a Pull Request"){
+                
+            }*/
 
         } catch (e) {
             currentBuild.result = 'FAILURE'
