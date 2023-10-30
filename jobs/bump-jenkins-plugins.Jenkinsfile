@@ -97,7 +97,7 @@ lock(resource: "bump-jenkins") {
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
                                                         shwrap("""
-                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "Bump jenkins plugin version to the latest", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
+                        curl -H "Authorization: token ${GHTOKEN}" -X POST -d '{ "title": "Bump jenkins plugin version to the latest", "head": "coreosbot-releng:${pr_branch}", "base": "main" }' https://api.github.com/repos/coreosbot-releng/fedora-coreos-pipeline/pulls
                         """)
                     }
                 }
