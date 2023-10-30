@@ -99,10 +99,10 @@ lock(resource: "bump-jenkins") {
                     
                         curl -H "Authorization: token ${GHTOKEN}" \
                         -X POST \
-                        -d '{
-                            "title": "Bump jenkins plugin version to the latest",
-                            "head": "${pr_branch}",
-                            "base": "main"
+                        -d '{ \
+                            "title": "Bump jenkins plugin version to the latest", \
+                            "head": "${pr_branch}", \
+                            "base": "main" \
                         }' \ 
                         https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
                     }
