@@ -18,15 +18,15 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-node {
-def getPluginLatestURL(pluginName) {
+
+/*def getPluginLatestURL(pluginName) {
     def pluginsUpdate
     //node {
         pluginsUpdate = shwrapCapture("curl -Ls -o /dev/null -w '%{url_effective}' https://updates.jenkins.io/download/plugins/${pluginName}/latest/${pluginName}.hpi")
     //}
     return pluginsUpdate
-}
-}
+}*/
+
 def getPluginLatestVersion(pluginsUpdate) {
     // Extract the plugin version from the URL 
     def versionPattern = /\/([^\/]+)\/([^\/]+)\/([^\/]+)\.hpi/
@@ -74,7 +74,7 @@ lock(resource: "bump-jenkins") {
                     if (parts.size() == 2) {
                         def pluginName = parts[0]
                         def currentVersion = parts[1]
-                        pluginsUpdate = getPluginLatestURL(pluginName)
+                        pluginsUpdate = shwrapCapture("curl -Ls -o /dev/null -w '%{url_effective}' https://updates.jenkins.io/download/plugins/${pluginName}/latest/${pluginName}.hpi")
                         def latestVersion = getPluginLatestVersion(pluginsUpdate)
                         if (latestVersion.toString() != currentVersion.toString()) {
                             haveChanges = true
