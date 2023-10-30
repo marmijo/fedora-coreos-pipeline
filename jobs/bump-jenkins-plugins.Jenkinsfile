@@ -19,7 +19,7 @@ properties([
 ])
 
 botCreds = "github-coreosbot-releng-token-username-password"
-coreosbot_token = "github-coreosbot-releng-token-text"
+//coreosbot_token = "github-coreosbot-releng-token-text"
 pr_branch = "jp"
 
 def getPluginLatestVersion(pluginsUpdate) {
@@ -96,14 +96,30 @@ lock(resource: "bump-jenkins") {
                     withCredentials([usernamePassword(credentialsId: botCreds,
                                                       usernameVariable: 'GHUSER',
                                                       passwordVariable: 'GHTOKEN')]) {
+                    
+                        curl -H "Authorization: token ${GHTOKEN}" \
+                        -X POST \
+                        -d '{
+                            "title": "Bump jenkins plugin version to the latest",
+                            "head": "${pr_branch}",
+                            "base": "main"
+                        }' \ 
+                        https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
                     }
                 }
             }
-
+/*
             stage ("Create a Pull Request"){
-                curl -H "Authorization: token ${coreosbot_token}" -X POST -d '{"title": "Bump jenkins plugin version to the latest","head": "${pr_branch}","base": "main"}' https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
+                curl -H "Authorization: token ${coreosbot_token}" \
+                -X POST \
+                -d '{
+                    "title": "Bump jenkins plugin version to the latest",
+                    "head": "${pr_branch}",
+                    "base": "main"
+                }' \ 
+                https://api.github.com/repos/marmijo/fedora-coreos-pipeline/pulls
             }
-
+*/
         } catch (e) {
             currentBuild.result = 'FAILURE'
             throw e
