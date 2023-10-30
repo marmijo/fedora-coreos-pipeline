@@ -18,15 +18,15 @@ properties([
     durabilityHint('PERFORMANCE_OPTIMIZED')
 ])
 
-
+node {
 def getPluginLatestURL(pluginName) {
     def pluginsUpdate
-    node {
+    //node {
         pluginsUpdate = shwrapCapture("curl -Ls -o /dev/null -w '%{url_effective}' https://updates.jenkins.io/download/plugins/${pluginName}/latest/${pluginName}.hpi")
-    }
+    //}
     return pluginsUpdate
 }
-
+}
 def getPluginLatestVersion(pluginsUpdate) {
     // Extract the plugin version from the URL 
     def versionPattern = /\/([^\/]+)\/([^\/]+)\/([^\/]+)\.hpi/
