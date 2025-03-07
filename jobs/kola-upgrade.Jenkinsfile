@@ -69,7 +69,7 @@ def start_stream = start_streams[params.STREAM]
 //     start_version = '32'
 // }
 
-currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version}->${target_version}"
+currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${target_version}"
 
 // Set the memory request to a reasonable value.
 def cosa_memory_request_mb = 1024
@@ -83,7 +83,7 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
     cosaPod(memory: "${cosa_memory_request_mb}Mi",
             image: params.COREOS_ASSEMBLER_IMAGE,
             serviceAccount: "jenkins") {
-    timeout(time: 90, unit: 'MINUTES') {
+    timeout(time: 240, unit: 'MINUTES') {
     try {
 
         // Determine the target version. If no params.TARGET_VERSION was
