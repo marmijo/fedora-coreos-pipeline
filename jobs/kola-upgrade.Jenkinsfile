@@ -149,123 +149,126 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
             echo "Selected ${start_versions[i]} as the starting version to test"
             //currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version}->${target_version}"
 
-            def remoteSession = ""
-            if (params.ARCH != 'x86_64') {
-                // If we're on mArch and using QEMU then initialize the
-                // session on the remote builder
-                stage("Initialize Remote") {
-                    pipeutils.withPodmanRemoteArchBuilder(arch: params.ARCH) {
-                        remoteSession = shwrapCapture("""
-                        cosa remote-session create --image ${params.COREOS_ASSEMBLER_IMAGE} --expiration 4h --workdir ${env.WORKSPACE}
+            catchError(currentBuild.result = 'FAILURE') {
+
+                def remoteSession = ""
+                if (params.ARCH != 'x86_64') {
+                    // If we're on mArch and using QEMU then initialize the
+                    // session on the remote builder
+                    stage("Initialize Remote") {
+                        pipeutils.withPodmanRemoteArchBuilder(arch: params.ARCH) {
+                            remoteSession = shwrapCapture("""
+                            cosa remote-session create --image ${params.COREOS_ASSEMBLER_IMAGE} --expiration 4h --workdir ${env.WORKSPACE}
+                            """)
+                        }
+                    }
+                }
+
+                // Run the remaining code in a remote session if we created one.
+                pipeutils.withOptionalExistingCosaRemoteSession(
+                                arch: params.ARCH, session: remoteSession) {
+                    stage('BuildFetch') {
+                        def commitopt = ''
+                        if (params.SRC_CONFIG_COMMIT != '') {
+                            commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
+                        }
+                        def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
+                        pipeutils.shwrapWithAWSBuildUploadCredentials("""
+                        cosa init --force --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
+                        cosa buildfetch --artifact=qemu --stream=${start_stream} --build=${start_versions[i]} --arch=${params.ARCH}
+                        cosa decompress --build=${start_versions[i]}
                         """)
                     }
-                }
-            }
 
-            // Run the remaining code in a remote session if we created one.
-            pipeutils.withOptionalExistingCosaRemoteSession(
-                            arch: params.ARCH, session: remoteSession) {
-                stage('BuildFetch') {
-                    def commitopt = ''
-                    if (params.SRC_CONFIG_COMMIT != '') {
-                        commitopt = "--commit=${params.SRC_CONFIG_COMMIT}"
-                    }
-                    def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
-                    pipeutils.shwrapWithAWSBuildUploadCredentials("""
-                    cosa init --force --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
-                    cosa buildfetch --artifact=qemu --stream=${start_stream} --build=${start_versions[i]} --arch=${params.ARCH}
-                    cosa decompress --build=${start_versions[i]}
-                    """)
-                }
+                    // A few independent tasks that can be run in parallel
+                    def parallelruns = [:]
 
-                // A few independent tasks that can be run in parallel
-                def parallelruns = [:]
+                    shwrap("""
+                    cosa shell -- tee tmp/target_stream.bu <<EOF
+    variant: fcos
+    version: 1.0.0
+    storage:
+      files:
+        - path: /etc/target_stream
+          mode: 0644
+          contents:
+            inline: |
+              ${params.STREAM}
+    EOF
+    """)
 
-                shwrap("""
-                cosa shell -- tee tmp/target_stream.bu <<EOF
-variant: fcos
-version: 1.0.0
-storage:
-  files:
-    - path: /etc/target_stream
-      mode: 0644
-      contents:
-        inline: |
-          ${params.STREAM}
-EOF
-""")
+                    def kolaparams = [
+                        arch: params.ARCH,
+                        build: start_versions[i],
+                        cosaDir: env.WORKSPACE,
+                        extraArgs: "--tag extended-upgrade --append-butane tmp/target_stream.bu",
+                        skipBasicScenarios: true,
+                        skipUpgrade: true,
+                        skipKolaTags: pipecfg.streams[params.STREAM].skip_kola_tags,
+                    ]
+                    def k1, k2, k3
 
-                def kolaparams = [
-                    arch: params.ARCH,
-                    build: start_versions[i],
-                    cosaDir: env.WORKSPACE,
-                    extraArgs: "--tag extended-upgrade --append-butane tmp/target_stream.bu",
-                    skipBasicScenarios: true,
-                    skipUpgrade: true,
-                    skipKolaTags: pipecfg.streams[params.STREAM].skip_kola_tags,
-                ]
-                def k1, k2, k3
-
-                switch(params.ARCH) {
-                    case 'x86_64':
-                        k1 = kolaparams.clone()
-                        k1.extraArgs += " --qemu-firmware=uefi"
-                        k1.marker = "uefi"
-                        parallelruns['Kola:UEFI'] = { kola(k1) }
-                        // SecureBoot doesn't work on older FCOS builds with latest qemu
-                        // so we must run it conditionally.
-                        // https://github.com/coreos/fedora-coreos-tracker/issues/1452
-                        def secureboot_start_version = 34
-                        if (start_stream == 'next') {
-                            secureboot_start_version = 35
-                        }
-                        if ((start_versions[i][0..1] as Integer) >= secureboot_start_version) {
-                            k2 = kolaparams.clone()
-                            k2.extraArgs += " --qemu-firmware=uefi-secure"
-                            if ((start_versions[i][0..1] as Integer) <= 37) {
-                                // workaround a bug where grub would fail to allocate memory
-                                // when start_versions[i] is <= 37.20230110.2.0
-                                // https://github.com/coreos/fedora-coreos-tracker/issues/1456
-                                k2.extraArgs += " --qemu-memory=1536"
+                    switch(params.ARCH) {
+                        case 'x86_64':
+                            k1 = kolaparams.clone()
+                            k1.extraArgs += " --qemu-firmware=uefi"
+                            k1.marker = "uefi"
+                            parallelruns['Kola:UEFI'] = { kola(k1) }
+                            // SecureBoot doesn't work on older FCOS builds with latest qemu
+                            // so we must run it conditionally.
+                            // https://github.com/coreos/fedora-coreos-tracker/issues/1452
+                            def secureboot_start_version = 34
+                            if (start_stream == 'next') {
+                                secureboot_start_version = 35
                             }
-                            k2.marker = "uefi-secure"
-                            parallelruns['Kola:UEFI-SECURE'] = { kola(k2) }
-                        }
-                        k3 = kolaparams.clone()
-                        k3.extraArgs += " --qemu-firmware=bios"
-                        k3.marker = "bios"
-                        parallelruns['Kola:BIOS'] = { kola(k3) }
-                        break;
-                    case 'aarch64':
-                        k1 = kolaparams.clone()
-                        k1.extraArgs += " --qemu-firmware=uefi"
-                        k1.marker = "uefi"
-                        parallelruns['Kola:UEFI'] = { kola(k1) }
-                        break;
-                    case 's390x':
-                        parallelruns['Kola'] = { kola(kolaparams) }
-                        break;
-                    case 'ppc64le':
-                        parallelruns['Kola'] = { kola(kolaparams) }
-                        break;
-                    default:
-                        assert false
-                        break;
+                            if ((start_versions[i][0..1] as Integer) >= secureboot_start_version) {
+                                k2 = kolaparams.clone()
+                                k2.extraArgs += " --qemu-firmware=uefi-secure"
+                                if ((start_versions[i][0..1] as Integer) <= 37) {
+                                    // workaround a bug where grub would fail to allocate memory
+                                    // when start_versions[i] is <= 37.20230110.2.0
+                                    // https://github.com/coreos/fedora-coreos-tracker/issues/1456
+                                    k2.extraArgs += " --qemu-memory=1536"
+                                }
+                                k2.marker = "uefi-secure"
+                                parallelruns['Kola:UEFI-SECURE'] = { kola(k2) }
+                            }
+                            k3 = kolaparams.clone()
+                            k3.extraArgs += " --qemu-firmware=bios"
+                            k3.marker = "bios"
+                            parallelruns['Kola:BIOS'] = { kola(k3) }
+                            break;
+                        case 'aarch64':
+                            k1 = kolaparams.clone()
+                            k1.extraArgs += " --qemu-firmware=uefi"
+                            k1.marker = "uefi"
+                            parallelruns['Kola:UEFI'] = { kola(k1) }
+                            break;
+                        case 's390x':
+                            parallelruns['Kola'] = { kola(kolaparams) }
+                            break;
+                        case 'ppc64le':
+                            parallelruns['Kola'] = { kola(kolaparams) }
+                            break;
+                        default:
+                            assert false
+                            break;
+                    }
+
+                    // process this batch
+                    parallel parallelruns
                 }
 
-                // process this batch
-                parallel parallelruns
-            }
-
-            // Destroy the remote sessions. We don't need them anymore
-            if (remoteSession != "") {
-                stage("Destroy Remote") {
-                    pipeutils.withExistingCosaRemoteSession(
-                        arch: params.ARCH, session: remoteSession) {
-                        shwrap("cosa remote-session destroy")
+                // Destroy the remote sessions. We don't need them anymore
+                if (remoteSession != "") {
+                    stage("Destroy Remote") {
+                        pipeutils.withExistingCosaRemoteSession(
+                            arch: params.ARCH, session: remoteSession) {
+                            shwrap("cosa remote-session destroy")
+                        }
                     }
                 }
-            }
+            } //end of catchError block
         }
         currentBuild.result = 'SUCCESS'
 
