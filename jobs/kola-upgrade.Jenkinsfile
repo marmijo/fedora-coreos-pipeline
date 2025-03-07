@@ -11,8 +11,9 @@ properties([
       choice(name: 'STREAM',
              choices: pipeutils.get_streams_choices(pipecfg),
              description: 'CoreOS stream to test'),
-      string(name: 'START_VERSION',
-             description: 'CoreOS Build ID or Fedora major version to start from',
+      string(name: 'START_VERSIONS',
+             description: 'A list of CoreOS Build ID or Fedora major version to start from (space seperated)',
+             defaultValue: '32 33 34 35 36 37 38 39 40 41', //just for testing purposes
              trim: true),
       string(name: 'TARGET_VERSION',
              description: 'Final CoreOS Build ID that passes test',
@@ -57,7 +58,7 @@ def deadends = ['38.20230310.1.0','30.20190716.1']
 
 // Vars for start/target versions
 def target_version = params.TARGET_VERSION
-def start_version = params.START_VERSION
+def start_versions = params.START_VERSIONS
 def start_stream = start_streams[params.STREAM]
 
 // TO DO:
@@ -102,34 +103,46 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
         //    keep looking here!!
         //    handle the case where start_versions is empty (only test the earliest version)
         //        - add a default value so that the list wil never be empty at this stage
-        } else {
-            shwrap("curl -LO https://builds.coreos.fedoraproject.org/prod/streams/${start_stream}/releases.json")
-            def releases = readJSON file: "releases.json"
-            def newest_version = releases["releases"][-1]["version"]
-            for (release in releases["releases"]) {
-                def has_arch = release["commits"].find{ commit -> commit["architecture"] == params.ARCH }
-                if (release["version"] in deadends || has_arch == null) {
-                    continue // This release has been disqualified
+        for (start_version in start_versions) {
+            if (start_version.length() > 2) {
+                if (start_version in deadends) {
+                    error("Specified start_version is a deadend release")
                 }
-                if (start_version.length() == 2) {
-                    if (release["version"] == newest_version) {
-                        // We've reached the latest build in the stream. This can happen
-                        // when we're testing i.e. rawhide and it's moved on to FN+1, but
-                        // `next` hasn't. Just use the newest build in `start_stream` in
-                        // that case.
-                        start_version = newest_version
-                        break
-                    } else if ((release["version"][0..1] as Integer) > (start_version as Integer)) {
-                        echo "There wasn't a release for this architecture for Fedora ${start_version}.. Skipping"
-                        return
-                    } else if (release["version"][0..1] == start_version) {
+            } else {
+                shwrap("curl -LO https://builds.coreos.fedoraproject.org/prod/streams/${start_stream}/releases.json")
+                def releases = readJSON file: "releases.json"
+                def newest_version = releases["releases"][-1]["version"]
+                // for each release in the json
+                for (release in releases["releases"]) {
+                    //theres an arch listed in the json for this release
+                    def has_arch = release["commits"].find{ commit -> commit["architecture"] == params.ARCH }
+                    // dead end, no arch?
+                    if (release["version"] in deadends || has_arch == null) {
+                        continue // This release has been disqualified
+                    }
+                    if (start_version.length() == 2) {
+                        if (release["version"] == newest_version) {
+                            // We've reached the latest build in the stream. This can happen
+                            // when we're testing i.e. rawhide and it's moved on to FN+1, but
+                            // `next` hasn't. Just use the newest build in `start_stream` in
+                            // that case.
+                            start_version = newest_version
+                            break
+                        } else if ((release["version"][0..1] as Integer) > (start_version as Integer)) {
+                            echo "There wasn't a release for this architecture for Fedora ${start_version}.. Skipping"
+                            return
+                        } else if (release["version"][0..1] == start_version) {
+                            start_version = release["version"]
+                            break
+                        }
+                    } else {
+                        // to do:
+                        //  is this where I would handle the empty string case???
+                        //      earliest avialable
+                        // No restrictions on start_version. Use oldest available
                         start_version = release["version"]
                         break
                     }
-                } else {
-                    // No restrictions on start_version. Use oldest available
-                    start_version = release["version"]
-                    break
                 }
             }
         }
