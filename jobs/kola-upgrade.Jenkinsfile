@@ -104,7 +104,7 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
         //        - add a default value so that the list wil never be empty at this stage
         // iterate over each start version, process it and replace with the actual start version
         // if necessary
-        start_versions.eachWithIndex { start_version, index ->
+        start_versions.eachWithIndex { start_version, i ->
             if (start_version.length() > 2) {
                 if (start_version in deadends) {
                     error("Specified start_version is a deadend release")
@@ -127,13 +127,13 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
                             // when we're testing i.e. rawhide and it's moved on to FN+1, but
                             // `next` hasn't. Just use the newest build in `start_stream` in
                             // that case.
-                            start_versions[index] = newest_version
+                            start_versions[i] = newest_version
                             break
                         } else if ((release["version"][0..1] as Integer) > (start_version as Integer)) {
                             echo "There wasn't a release for this architecture for Fedora ${start_version}.. Skipping"
                             return
                         } else if (release["version"][0..1] == start_version) {
-                            start_versions[index] = release["version"]
+                            start_versions[i] = release["version"]
                             break
                         }
                     } else {
@@ -141,12 +141,12 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
                         //  is this where I would handle the empty string case???
                         //      earliest avialable
                         // No restrictions on start_version. Use oldest available
-                        start_versions[index] = release["version"]
+                        start_versions[i] = release["version"]
                         break
                     }
                 }
             }
-            echo "Selected ${start_version} as the starting version to test"
+            echo "Selected ${start_versions[i]} as the starting version to test"
             //currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version}->${target_version}"
 
             def remoteSession = ""
@@ -173,8 +173,8 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
                     def ref = pipeutils.get_source_config_ref_for_stream(pipecfg, params.STREAM)
                     pipeutils.shwrapWithAWSBuildUploadCredentials("""
                     cosa init --force --branch ${ref} ${commitopt} ${pipecfg.source_config.url}
-                    cosa buildfetch --artifact=qemu --stream=${start_stream} --build=${start_version} --arch=${params.ARCH}
-                    cosa decompress --build=${start_version}
+                    cosa buildfetch --artifact=qemu --stream=${start_stream} --build=${start_versions[i]} --arch=${params.ARCH}
+                    cosa decompress --build=${start_versions[i]}
                     """)
                 }
 
@@ -197,7 +197,7 @@ EOF
 
                 def kolaparams = [
                     arch: params.ARCH,
-                    build: start_version,
+                    build: start_versions[i],
                     cosaDir: env.WORKSPACE,
                     extraArgs: "--tag extended-upgrade --append-butane tmp/target_stream.bu",
                     skipBasicScenarios: true,
@@ -219,12 +219,12 @@ EOF
                         if (start_stream == 'next') {
                             secureboot_start_version = 35
                         }
-                        if ((start_version[0..1] as Integer) >= secureboot_start_version) {
+                        if ((start_versions[i][0..1] as Integer) >= secureboot_start_version) {
                             k2 = kolaparams.clone()
                             k2.extraArgs += " --qemu-firmware=uefi-secure"
-                            if ((start_version[0..1] as Integer) <= 37) {
+                            if ((start_versions[i][0..1] as Integer) <= 37) {
                                 // workaround a bug where grub would fail to allocate memory
-                                // when start_version is <= 37.20230110.2.0
+                                // when start_versions[i] is <= 37.20230110.2.0
                                 // https://github.com/coreos/fedora-coreos-tracker/issues/1456
                                 k2.extraArgs += " --qemu-memory=1536"
                             }
