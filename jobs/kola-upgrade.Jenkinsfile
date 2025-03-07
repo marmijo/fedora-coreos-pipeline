@@ -60,11 +60,13 @@ def target_version = params.TARGET_VERSION
 def start_version = params.START_VERSION
 def start_stream = start_streams[params.STREAM]
 
+// TO DO:
+// start_version will be replaced by start_versions (a list provided by utils.groovy) 
 // Because of an x86_64 bootloader issue the oldest that is supported
 // on x86_64 is 32.x: https://github.com/coreos/fedora-coreos-tracker/issues/1448
-if (start_version == '' && params.ARCH == 'x86_64') {
-    start_version = '32'
-}
+// if (start_version == '' && params.ARCH == 'x86_64') {
+//     start_version = '32'
+// }
 
 currentBuild.description = "[${params.STREAM}][${params.ARCH}] - ${start_version}->${target_version}"
 
@@ -92,14 +94,14 @@ lock(resource: "kola-upgrade-${params.ARCH}") {
             """)
         }
         echo "Selected ${target_version} as the target version to test"
-        // Determine the start version based on the provided params.START_VERSION
-        // and the releases.json for this stream. The user can provide a full
-        // version, the empty string (implies earliest available), or two digits
-        // (implies earliest available based on the Fedora major).
-        if (start_version.length() > 2) {
-            if (start_version in deadends) {
-                error("Specified start_version is a deadend release")
-            }
+        // Determine the start versions based on the provided params.START_VERSIONS
+        // and the releases.json for this stream. The user can provide a list of full
+        // versions or two digits versions (implies earliest available based on the Fedora major). 
+        // If the user provides the empty string, only the earliest available version will be tested.
+        // to do...
+        //    keep looking here!!
+        //    handle the case where start_versions is empty (only test the earliest version)
+        //        - add a default value so that the list wil never be empty at this stage
         } else {
             shwrap("curl -LO https://builds.coreos.fedoraproject.org/prod/streams/${start_stream}/releases.json")
             def releases = readJSON file: "releases.json"

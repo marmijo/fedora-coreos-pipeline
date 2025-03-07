@@ -642,7 +642,11 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, cosa, basearch, commit) {
     // each.
     if (stream_info.type == 'production') {
         for (start_version in min_version..max_version) {
+            // TO DO:
+            // if start_version >= min_supported_start_version[basearch]
             start_versions += start_version
+            // else
+            // dont add it to this list
         }
     }
 
@@ -665,9 +669,18 @@ def run_fcos_upgrade_tests(pipecfg, stream, version, cosa, basearch, commit) {
                       string(name: 'ARCH', value: basearch),
                       string(name: 'COREOS_ASSEMBLER_IMAGE', value: cosa),
                       string(name: 'SRC_CONFIG_COMMIT', value: commit)]
+        // dont do this here
+        // instead, perform this check when building start_versions
+        //
         if (start_version >= min_supported_start_versions[basearch]) {
             params += string(name: 'START_VERSION', value: start_version as String)
             build job: 'kola-upgrade', wait: false, parameters: params
+        // to do:
+        // change this whole section to work more like this:
+        // if start_versions is not empty
+        //      send whole list to kola-upgrade to process
+        // else
+        //      ??? what would be the message, will this ever happen anymore?
         } else {
             echo "Skipping ${start_version} upgrade test for ${basearch}"
         }
