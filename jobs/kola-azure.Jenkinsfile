@@ -71,7 +71,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                     def (url, ref) = pipeutils.get_source_config_for_stream(pipecfg, params.STREAM)
                     def variant = stream_info.variant ? "--variant ${stream_info.variant}" : ""
                     shwrap("""
-                    cosa init --branch ${ref} ${commitopt} ${variant} ${url}
+                    cosa init --branch azure-udev-tests ${commitopt} ${variant} https://github.com/marmijo/fedora-coreos-pipeline
                     time -v cosa buildfetch --build=${params.VERSION} --arch=${params.ARCH} \
                         --url=s3://${s3_stream_dir}/builds --artifact=azure
                     """)
