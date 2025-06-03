@@ -127,6 +127,7 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                 # it will be a no-op on gallery creation given the
                 # gallery exists in the specified region.
                 ore azure create-gallery-image --log-level=INFO         \
+                    --arch $params.ARCH                                 \
                     --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
                     --azure-location $region                            \
                     --resource-group $azure_testing_resource_group      \
@@ -140,6 +141,13 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
             // skip the upgrade test.
             try {
                 def azure_subscription = shwrapCapture("jq -r .subscription \${AZURE_KOLA_TESTS_CONFIG}")
+                // The kola feature to override the instance type per test
+                // doesn't take architecture into account so we'll just skip
+                // the nvme test on aarch64.
+                def denylisted_tests = ""
+                if (params.ARCH == "aarch64") {
+                    denylisted_tests = "--denlist-test ext.config.platforms.azure.nvme"
+                }
                 kola(cosaDir: env.WORKSPACE, parallel: 10,
                      build: params.VERSION, arch: params.ARCH,
                      extraArgs: params.KOLA_TESTS,
@@ -147,8 +155,9 @@ cosaPod(memory: "${cosa_memory_request_mb}Mi", kvm: false,
                      skipKolaTags: stream_info.skip_kola_tags,
                      platformArgs: """-p=azure                               \
                          --azure-credentials \${AZURE_KOLA_TESTS_CONFIG}     \
-                         --azure-location $region                            \
-                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/galleries/${azure_testing_gallery}/images/${azure_image_name}/versions/1.0.0""")
+                         --azure-disk-uri /subscriptions/${azure_subscription}/resourceGroups/${azure_testing_resource_group}/providers/Microsoft.Compute/galleries/${azure_testing_gallery}/images/${azure_image_name}/versions/1.0.0 \
+                         --azure-location $region  $denylisted_tests         \
+                         """)
             } finally {
                 parallel "Delete Image": {
                     // Delete the image in Azure
