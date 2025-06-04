@@ -100,7 +100,7 @@ objects:
               -Dfile.encoding=UTF-8
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=900
               -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true
-              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultImage=jenkins-agent-base:latest
+              -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultImage=image-registry.openshift-image-registry.svc:5000/fedora-coreos-pipeline/jenkins-agent-base:latest
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultCpuRequest=1
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultMemoryRequest=512Mi
               -Dorg.csanchez.jenkins.plugins.kubernetes.pipeline.PodTemplateStepExecution.defaultContainer.defaultCpuLimit=1
@@ -272,6 +272,11 @@ parameters:
 #  displayName: Jenkins ImageStreamTag
 #  name: JENKINS_IMAGE_STREAM_TAG
 #  value: jenkins:2
+# DELTA: add separate agent namespace parameterAdd commentMore actions
+- description: The OpenShift Namespace where the Jenkins Agent ImageStream resides.
+  displayName: Jenkins Agent ImageStream Namespace
+  name: AGENT_NAMESPACE
+  value: fedora-coreos-pipeline
 - description: When a fatal error occurs, an error log is created with information
     and the state obtained at the time of the fatal error.
   displayName: Fatal Error Log File
