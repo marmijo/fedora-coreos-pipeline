@@ -66,7 +66,7 @@ node {
         throw new Exception("Missing BUILD_VERSION parameter!")
     }
 
-    PR_BRANCH = "bootimage-bump-${params.BUILD_VERSION}"
+    PR_BRANCH = "bootimage-bump-${params.RELEASE_BRANCH}-${params.BUILD_VERSION}"
     streamSplit = params.STREAM.split('-')
     if (params.RELEASE_BRANCH != '') {
         RELEASE_BRANCH = params.RELEASE_BRANCH
