@@ -254,9 +254,11 @@ lock(resource: "build-node-image") {
 
         def do_brew = {
             if (!skip_brew_upload) {
-                pipeutils.stageWithTimeoutWarning('Brew Upload', stage_budgets['Brew Upload']) {
-                    pipeutils.brew_upload(arches, params.RELEASE, image_repo, node_image_manifest_digest,
-                                          extensions_image_manifest_digest, timestamp, pipecfg)
+                withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                    pipeutils.stageWithTimeoutWarning('Brew Upload', stage_budgets['Brew Upload']) {
+                        pipeutils.brew_upload(arches, params.RELEASE, image_repo, node_image_manifest_digest,
+                                              extensions_image_manifest_digest, timestamp, pipecfg)
+                    }
                 }
             }
         }
