@@ -190,6 +190,8 @@ lock(resource: "build-node-image") {
                                         cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
                                     """)
 
+                                    // sync across the auth credentials to remote sessions
+                                    utils.syncCredentialsIfInRemoteSession(['REGISTRY_AUTH_FILE'])
                                     // Download the node image we just built
                                     def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
                                     shwrap("""
