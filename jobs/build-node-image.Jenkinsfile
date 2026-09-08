@@ -190,6 +190,8 @@ lock(resource: "build-node-image") {
                                         cosa init https://github.com/openshift/os --branch release-${openshift_stream} --force | true
                                     """)
 
+                                    // sync across the auth credentials to remote sessions
+                                    utils.syncCredentialsIfInRemoteSession(['REGISTRY_AUTH_FILE'])
                                     // Download the node image we just built
                                     def skopeo_arch_override = pipeutils.rpm_to_go_arch(arch)
                                     shwrap("""
@@ -252,9 +254,11 @@ lock(resource: "build-node-image") {
 
         def do_brew = {
             if (!skip_brew_upload) {
-                pipeutils.stageWithTimeoutWarning('Brew Upload', stage_budgets['Brew Upload']) {
-                    pipeutils.brew_upload(arches, params.RELEASE, image_repo, node_image_manifest_digest,
-                                          extensions_image_manifest_digest, timestamp, pipecfg)
+                withCredentials([file(credentialsId: 'oscontainer-push-registry-secret', variable: 'REGISTRY_AUTH_FILE')]) {
+                    pipeutils.stageWithTimeoutWarning('Brew Upload', stage_budgets['Brew Upload']) {
+                        pipeutils.brew_upload(arches, params.RELEASE, image_repo, node_image_manifest_digest,
+                                              extensions_image_manifest_digest, timestamp, pipecfg)
+                    }
                 }
             }
         }
